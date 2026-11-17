@@ -1,11 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -18,4 +14,95 @@ model User {
   email     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Application {
+  id        String   @id @default(uuid())
+  name      String
+  iri       String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects Project[]
+}
+
+model Project {
+  id            String   @id @default(uuid())
+  name          String
+  iri           String   @unique
+  active        Boolean  @default(true)
+  applicationId String
+  badges        Badge[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  application Application        @relation(fields: [applicationId], references: [id])
+  challenges  ProjectChallenge[]
+}
+
+model Challenge {
+  id          String   @id @default(uuid())
+  name        String
+  iri         String   @unique
+  points      Int
+  badgeRules  BadgeRule[]
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projects ProjectChallenge[]
+}
+
+model ProjectChallenge {
+  projectId   String
+  challengeId String
+
+  project   Project   @relation(fields: [projectId], references: [id])
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+
+  @@id([projectId, challengeId])
+}
+
+
+enum BadgeRuleType {
+  POINTS_THRESHOLD
+  CHALLENGE_COMPLETED
+}
+
+enum BadgeRuleOperator {
+  ALL
+  ANY
+}
+
+model Badge {
+  id           String            @id @default(uuid())
+  name         String
+  description  String
+  iri          String            @unique
+  imageUrl     String?
+  active       Boolean           @default(true)
+  ruleOperator BadgeRuleOperator  @default(ALL)
+  projectId    String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  project      Project           @relation(fields: [projectId], references: [id])
+  rules        BadgeRule[]
+
+  @@index([projectId])
+}
+
+model BadgeRule {
+  id             String        @id @default(uuid())
+  badgeId        String
+  type           BadgeRuleType
+  requiredPoints Int?
+  challengeId    String?
+
+  badge          Badge         @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  challenge      Challenge?    @relation(fields: [challengeId], references: [id])
+
+  @@index([badgeId])
+  @@index([challengeId])
 }
